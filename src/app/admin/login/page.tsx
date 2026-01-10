@@ -1,26 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Loader2 } from "lucide-react";
+import { Lock, Mail, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminLogin() {
   const router = useRouter();
+  const { login, isAuthenticated, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.push("/admin/dashboard");
+    }
+  }, [loading, isAuthenticated, router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
     setError("");
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      // Mock successful login
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      await login(email, password);
+      // Successful login, redirect to dashboard
       router.push("/admin/dashboard");
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || "Login failed. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -34,6 +50,13 @@ export default function AdminLogin() {
             Sign in to manage the Smart Energy Monitor system
           </p>
         </div>
+
+        {error && (
+          <div className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">

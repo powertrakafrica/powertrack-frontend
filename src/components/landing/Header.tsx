@@ -23,12 +23,6 @@ export default function Header() {
         </nav>
         <div className="flex items-center gap-4">
           <Link
-            className="hidden sm:inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-medium text-zinc-300 transition-colors hover:text-white"
-            href="#"
-          >
-            Log in
-          </Link>
-          <Link
             className="inline-flex h-9 items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-700 disabled:pointer-events-none disabled:opacity-50"
             href="#"
           >

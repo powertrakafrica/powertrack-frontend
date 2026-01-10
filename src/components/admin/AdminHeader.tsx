@@ -1,6 +1,18 @@
-import { Bell, Search, User } from "lucide-react";
+"use client";
+
+import { Bell, Search, User, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
 export default function AdminHeader() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/admin/login");
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center border-b border-zinc-800 bg-zinc-950/80 px-6 backdrop-blur-sm lg:pl-72">
         <div className="flex flex-1 items-center justify-between">
@@ -20,12 +32,23 @@ export default function AdminHeader() {
                 </button>
                 <div className="flex items-center gap-3 pl-4 border-l border-zinc-800">
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-medium text-white">Admin User</p>
-                        <p className="text-xs text-zinc-500">Super Admin</p>
+                        <p className="text-sm font-medium text-white">
+                          {user?.username || 'Admin User'}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          {user?.role || 'ADMIN'}
+                        </p>
                     </div>
                     <div className="h-9 w-9 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 border border-zinc-700">
                         <User className="h-5 w-5" />
                     </div>
+                    <button
+                      onClick={handleLogout}
+                      className="rounded-full p-2 text-zinc-400 hover:bg-red-900/20 hover:text-red-400 transition-colors"
+                      title="Logout"
+                    >
+                      <LogOut className="h-5 w-5" />
+                    </button>
                 </div>
             </div>
         </div>
