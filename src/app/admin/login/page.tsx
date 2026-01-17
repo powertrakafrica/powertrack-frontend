@@ -100,7 +100,7 @@ export default function AdminLogin() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             <div className="flex items-center">
               <input
                 id="remember-me"
@@ -124,7 +124,7 @@ export default function AdminLogin() {
                 Forgot password?
               </Link>
             </div>
-          </div>
+          </div> */}
 
           <div>
             <button
