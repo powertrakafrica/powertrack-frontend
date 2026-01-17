@@ -79,7 +79,7 @@ export default function SettingsForm() {
               <label className="text-sm font-medium text-zinc-400">Bio</label>
               <textarea
                 rows={4}
-                defaultValue="Administrator for Smart Energy Dashboard."
+                defaultValue="Administrator for Power Track Dashboard."
                 className="w-full rounded-lg bg-zinc-950 border border-zinc-800 px-4 py-2 text-white focus:outline-none focus:border-blue-500 resize-none"
               />
             </div>

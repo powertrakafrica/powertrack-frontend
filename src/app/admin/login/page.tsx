@@ -47,7 +47,7 @@ export default function AdminLogin() {
             Admin Portal
           </h2>
           <p className="mt-2 text-sm text-zinc-400">
-            Sign in to manage the Smart Energy Monitor system
+            Sign in to manage the Power Track system
           </p>
         </div>
 
@@ -142,7 +142,7 @@ export default function AdminLogin() {
       </div>
 
        <div className="absolute bottom-6 text-center text-xs text-zinc-600">
-        &copy; {new Date().getFullYear()} Smart Energy Monitor. Restricted Access.
+        &copy; {new Date().getFullYear()} Power TrackMonitor. Restricted Access.
       </div>
     </div>
   );

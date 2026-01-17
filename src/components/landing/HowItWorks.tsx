@@ -42,9 +42,7 @@ export default function HowItWorks() {
               <p className="text-zinc-500 dark:text-zinc-400">
                 {step.description}
               </p>
-              {index < steps.length - 1 && (
-                <div className="hidden border-t-2 border-dashed border-zinc-200 dark:border-zinc-700 md:absolute md:left-1/2 md:top-8 md:block md:w-1/3 md:-translate-x-1/2" />
-              )}
+              
             </div>
           ))}
         </div>
