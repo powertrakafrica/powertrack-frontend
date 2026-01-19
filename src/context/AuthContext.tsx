@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import api, { ApiError } from "@/lib/api";
+import api, { ApiError, tokenStorage } from "@/lib/api";
 import { User } from "@/types/api";
 
 interface AuthState {
@@ -10,8 +10,16 @@ interface AuthState {
   error: string | null;
 }
 
+interface RegisterData {
+  email: string;
+  password: string;
+  username: string;
+  meterCode: string;
+}
+
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<User>;
+  register: (data: RegisterData) => Promise<User>;
   logout: () => Promise<void>;
   refetch: () => Promise<void>;
   isAuthenticated: boolean;
@@ -28,19 +36,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const checkAuth = async () => {
+    // Check if we have a token before trying to fetch user
+    const token = tokenStorage.getToken();
+    if (!token) {
+      setState({ user: null, loading: false, error: null });
+      return;
+    }
+
     try {
-      // Don't set loading to true here to avoid flashing loading state on every refetch
-      // if we wanted silent updates. unique loading state for initial load is set in useState
-      // But for consistency with original hook, let's keep it simple or improve it.
-      // Ideally correct logic:
-      // if (!state.user && state.loading) ...
-      
-      // Let's stick to the original logic but be careful about infinite loops if this was called in effect dependent on state
-      
-      const user = await api.getCurrentUser();
-      setState({ user: user as User, loading: false, error: null });
+      const response = await api.getCurrentUser();
+      setState({ user: response.user as User, loading: false, error: null });
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
+        // Token is invalid or expired, clear it
+        tokenStorage.removeToken();
         setState({ user: null, loading: false, error: null });
       } else {
         setState({ 
@@ -59,10 +68,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      const response: any = await api.login(email, password);
-      // Assuming response has user object, or we fetch it after
-      // Original code: setState({ user: response.user, ... })
-      
+      const response = await api.login(email, password);
+      // Token is automatically stored by api.login
       setState({ user: response.user, loading: false, error: null });
       return response.user;
     } catch (error) {
@@ -74,12 +81,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const register = async (data: RegisterData) => {
+    try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      const response = await api.register(data);
+      // Token is automatically stored by api.register
+      setState({ user: response.user, loading: false, error: null });
+      return response.user;
+    } catch (error) {
+      const errorMessage = error instanceof ApiError 
+        ? error.message 
+        : 'Registration failed';
+      setState(prev => ({ ...prev, loading: false, error: errorMessage }));
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await api.logout();
+      // Token is automatically cleared by api.logout
       setState({ user: null, loading: false, error: null });
     } catch (error) {
       console.error('Logout error:', error);
+      // Still clear local state even if API call fails
       setState({ user: null, loading: false, error: null });
     }
   };
@@ -91,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!state.user,
         isAdmin: state.user?.role === 'ADMIN',
         login,
+        register,
         logout,
         refetch: checkAuth,
       }}
@@ -107,3 +133,4 @@ export function useAuthContext() {
   }
   return context;
 }
+

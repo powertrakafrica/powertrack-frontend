@@ -1,5 +1,6 @@
 "use client";
 
+import api from "@/lib/api";
 import { X } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -16,31 +17,48 @@ export default function UserModal({ isOpen, onClose, user }: UserModalProps) {
     phone: "",
     meterId: "",
     location: "",
-    status: "active",
+    status: user?.subscription?.status,
   });
 
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
+    console.log(user)
     if (user) {
-      setFormData(user);
-    } else {
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        meterId: "",
-        location: "",
-        status: "active",
+       setFormData({
+        name: user?.user.fullname || "",
+        email: user?.user.email || "",
+        phone: user?.user.phone || "",
+        meterId: user?.meterCode || "",
+        location: user?.user.location || "",
+        status: user?.subscription?.status,
       });
+    } else {
+     return
     }
   }, [user]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission logic here
-    console.log("Form submitted:", formData);
-    onClose();
+    setLoading(true)
+    try {
+      const updatedUserObject =  await api.updateUser(user.user.id as string,{
+      fullname: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      location: formData.location,
+      status: formData.status,
+    })  
+    console.log(updatedUserObject)
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setLoading(false)
+      onClose();
+    }
   };
 
   return (
@@ -109,6 +127,7 @@ export default function UserModal({ isOpen, onClose, user }: UserModalProps) {
              <label className="block text-sm font-medium text-zinc-400 mb-1">Meter ID</label>
               <input
                 type="text"
+              disabled = {true}
                 required
                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.meterId}
@@ -141,7 +160,7 @@ export default function UserModal({ isOpen, onClose, user }: UserModalProps) {
               type="submit"
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
             >
-              {user ? "Save Changes" : "Create User"}
+              {loading ? "Saving..." : user? "Save Changes" : "Create User"}
             </button>
           </div>
         </form>

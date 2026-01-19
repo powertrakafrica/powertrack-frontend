@@ -2,6 +2,9 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
+// Token storage keys
+const TOKEN_KEY = 'smart_energy_token';
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -13,15 +16,44 @@ export class ApiError extends Error {
   }
 }
 
+// Token management helpers
+export const tokenStorage = {
+  getToken: (): string | null => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(TOKEN_KEY);
+  },
+  setToken: (token: string): void => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(TOKEN_KEY, token);
+  },
+  removeToken: (): void => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(TOKEN_KEY);
+  },
+};
+
+// Get authorization headers for authenticated requests
+export const getAuthHeaders = (): Record<string, string> => {
+  const token = tokenStorage.getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
 interface FetchOptions extends RequestInit {
   params?: Record<string, string>;
+  skipAuth?: boolean; // Skip adding auth header for public endpoints
 }
 
 async function fetchApi<T>(
   endpoint: string,
   options: FetchOptions = {}
 ): Promise<T> {
-  const { params, ...fetchOptions } = options;
+  const { params, skipAuth, ...fetchOptions } = options;
 
   // Build URL with query parameters
   let url = `${API_BASE_URL}${endpoint}`;
@@ -30,14 +62,25 @@ async function fetchApi<T>(
     url += `?${queryString}`;
   }
 
+  // Build headers with auth token
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(fetchOptions.headers as Record<string, string>),
+  };
+  
+  // Add Authorization header if we have a token and this isn't a public endpoint
+  if (!skipAuth) {
+    const token = tokenStorage.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
   try {
     const response = await fetch(url, {
       ...fetchOptions,
-      credentials: 'include', // Important for session cookies
-      headers: {
-        'Content-Type': 'application/json',
-        ...fetchOptions.headers,
-      },
+      credentials: 'include', // Keep for backwards compatibility with session cookies
+      headers,
     });
 
     // Handle non-JSON responses
@@ -80,25 +123,51 @@ async function fetchApi<T>(
 // API Methods
 export const api = {
   // Authentication
-  login: (email: string, password: string) =>
-    fetchApi('/login', {
+  login: async (email: string, password: string) => {
+    const response = await fetchApi<{ message: string; token: string; user: any }>('/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
-    }),
+      skipAuth: true, // Login doesn't need auth
+    });
+    // Store the JWT token
+    if (response.token) {
+      tokenStorage.setToken(response.token);
+    }
+    return response;
+  },
 
-  register: (data: { email: string; password: string; username: string; meterCode: string }) =>
-    fetchApi('/register', {
+  register: async (data: { email: string; password: string; username: string; meterCode: string }) => {
+    const response = await fetchApi<{ message: string; token: string; user: any }>('/register', {
       method: 'POST',
       body: JSON.stringify(data),
-    }),
+      skipAuth: true, // Register doesn't need auth
+    });
+    // Store the JWT token
+    if (response.token) {
+      tokenStorage.setToken(response.token);
+    }
+    return response;
+  },
 
-  logout: () =>
-    fetchApi('/logout', {
-      method: 'POST',
-    }),
+  logout: async () => {
+    try {
+      await fetchApi('/logout', {
+        method: 'POST',
+      });
+    } finally {
+      // Always clear the token, even if the API call fails
+      tokenStorage.removeToken();
+    }
+  },
 
   getCurrentUser: () =>
-    fetchApi('/me'),
+    fetchApi<{ user: any }>('/me'),
+
+  updateUser: (userId: string, data: any) =>
+    fetchApi(`/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // Dashboard
   getDashboard: () =>

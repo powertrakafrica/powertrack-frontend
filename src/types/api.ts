@@ -99,6 +99,13 @@ export interface AdminMeter {
 // API Response types
 export interface LoginResponse {
   message: string;
+  token: string;
+  user: User;
+}
+
+export interface RegisterResponse {
+  message: string;
+  token: string;
   user: User;
 }
 

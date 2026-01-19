@@ -36,6 +36,7 @@ export default function UsersPage() {
       setLoading(true);
       setError(null);
       const data: any = await api.getAllMeters();
+      console.log(data)
       setMeters(data || []);
     } catch (err) {
       const errorMessage = err instanceof ApiError 
@@ -58,12 +59,12 @@ export default function UsersPage() {
   );
 
   const handleEdit = (meter: AdminMeter) => {
-    setSelectedUser(meter);
+    setSelectedUser(()=>meter);
     setIsOpen(true);
   };
 
   const handleAdd = () => {
-    setSelectedUser(undefined);
+    setSelectedUser(()=>undefined);
     setIsOpen(true);
   };
 
@@ -162,7 +163,6 @@ export default function UsersPage() {
                   <th className="px-6 py-4 font-medium">Meter Code</th>
                   <th className="px-6 py-4 font-medium">User / Email</th>
                   <th className="px-6 py-4 font-medium">Subscription</th>
-                  <th className="px-6 py-4 font-medium">Last Reading</th>
                   <th className="px-6 py-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
@@ -184,18 +184,6 @@ export default function UsersPage() {
                         <div className="text-xs text-zinc-500 mt-1">
                           Expires: {new Date(meter.subscription.expiryDate).toLocaleDateString()}
                         </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-zinc-400">
-                      {meter.lastReading ? (
-                        <div>
-                          <div className="text-xs">{meter.lastReading.energyKWh.toFixed(2)} kWh</div>
-                          <div className="text-xs text-zinc-500">
-                            {new Date(meter.lastReading.timestamp).toLocaleString()}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-zinc-500">No data</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
