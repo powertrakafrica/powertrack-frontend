@@ -18,7 +18,7 @@ export default function ProtectedRoute({ children, requireAdmin = false }: Prote
     if (!loading) {
       if (!isAuthenticated) {
         // Not logged in, redirect to home page
-        router.push("/");
+        router.push("/admin/login");
       } else if (requireAdmin && !isAdmin) {
         // Logged in but not admin, redirect to home
         router.push("/");

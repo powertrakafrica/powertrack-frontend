@@ -1,4 +1,5 @@
 // API Client for Smart Energy Backend
+import { AdminDashboardData, AdminMeter } from "@/types/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
@@ -67,7 +68,7 @@ async function fetchApi<T>(
     'Content-Type': 'application/json',
     ...(fetchOptions.headers as Record<string, string>),
   };
-  
+
   // Add Authorization header if we have a token and this isn't a public endpoint
   if (!skipAuth) {
     const token = tokenStorage.getToken();
@@ -110,7 +111,7 @@ async function fetchApi<T>(
     if (error instanceof ApiError) {
       throw error;
     }
-    
+
     // Network errors
     if (error instanceof TypeError) {
       throw new ApiError('Network error. Please check your connection.', 0);
@@ -208,7 +209,10 @@ export const api = {
 
   // Admin
   getAllMeters: () =>
-    fetchApi('/admin/all-meters'),
+    fetchApi<AdminMeter[]>('/admin/all-meters'),
+
+  getAdminDashboard: () =>
+    fetchApi<AdminDashboardData>('/admin/dashboard'),
 
   getMeterReadings: (meterCode: string, params?: { limit?: number }) =>
     fetchApi(`/admin/readings/${meterCode}`, { params: params as any }),

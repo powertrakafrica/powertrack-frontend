@@ -83,6 +83,9 @@ export interface AdminMeter {
     id: string;
     username: string;
     email: string;
+    fullname?: string;
+    location?: string;
+    phone?: string;
   };
   subscription: {
     status: string;
@@ -94,6 +97,12 @@ export interface AdminMeter {
     voltage: number;
     current: number;
   };
+}
+
+export interface AdminDashboardData {
+  userStats: { totalUsers: number };
+  subscriptionStats: { activeSubscriptions: number; totalRevenue: number };
+  systemStats: { activeMeters24h: number };
 }
 
 // API Response types

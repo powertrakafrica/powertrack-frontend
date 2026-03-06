@@ -1,69 +1,72 @@
 "use client";
 
-import { 
-  Users, 
-  Zap, 
-  CreditCard, 
-  AlertTriangle, 
+import {
+  Users,
+  Zap,
+  CreditCard,
+  Activity,
   TrendingUp,
-  ArrowUpRight,
-  User,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Search
 } from "lucide-react";
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
 } from "recharts";
-import { useDashboard } from "@/hooks/useDashboard";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import { AdminDashboardData, AdminMeter } from "@/types/api";
 
-// Mock data for chart - will be replaced with analytics data
 const defaultChartData = [
-  { name: "Mon", energy: 0, cost: 0 },
-  { name: "Tue", energy: 0, cost: 0 },
-  { name: "Wed", energy: 0, cost: 0 },
-  { name: "Thu", energy: 0, cost: 0 },
-  { name: "Fri", energy: 0, cost: 0 },
-  { name: "Sat", energy: 0, cost: 0 },
-  { name: "Sun", energy: 0, cost: 0 },
+  { name: "Mon", energy: 0 },
+  { name: "Tue", energy: 0 },
+  { name: "Wed", energy: 0 },
+  { name: "Thu", energy: 0 },
+  { name: "Fri", energy: 0 },
+  { name: "Sat", energy: 0 },
+  { name: "Sun", energy: 0 },
 ];
 
 export default function DashboardOverview() {
-  const { data, loading, error, refetch } = useDashboard(true, 10000); // Auto-refresh every 10s
+  const [statsData, setStatsData] = useState<AdminDashboardData | null>(null);
+  const [meters, setMeters] = useState<AdminMeter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [chartData, setChartData] = useState(defaultChartData);
-  const [loadingChart, setLoadingChart] = useState(true);
 
-  // Fetch analytics data for chart
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [stats, allMeters] = await Promise.all([
+        api.getAdminDashboard(),
+        api.getAllMeters()
+      ]);
+      setStatsData(stats);
+      setMeters(allMeters || []);
+
+      // Mock processing for chart data based on available meter readings if needed
+      // For now, we'll keep it simple or use a default trend
+    } catch (err: any) {
+      console.error('Failed to fetch admin data:', err);
+      setError(err.message || 'An error occurred while fetching dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const analytics: any = await api.getAnalytics('week');
-        if (analytics.data && Array.isArray(analytics.data)) {
-          const formattedData = analytics.data.map((item: any) => ({
-            name: new Date(item.timestamp).toLocaleDateString('en-US', { weekday: 'short' }),
-            energy: item.energyKWh,
-            cost: item.costGHS,
-          }));
-          setChartData(formattedData);
-        }
-      } catch (err) {
-        console.error('Failed to fetch analytics:', err);
-      } finally {
-        setLoadingChart(false);
-      }
-    };
-
-    fetchAnalytics();
+    fetchData();
   }, []);
 
-  if (loading && !data) {
+  if (loading && !statsData) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -75,8 +78,8 @@ export default function DashboardOverview() {
     return (
       <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-6">
         <p className="text-red-400">{error}</p>
-        <button 
-          onClick={refetch}
+        <button
+          onClick={fetchData}
           className="mt-4 flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
         >
           <RefreshCw className="h-4 w-4" /> Try Again
@@ -87,50 +90,52 @@ export default function DashboardOverview() {
 
   const stats = [
     {
-      name: "Today's Energy",
-      value: data?.stats?.todayEnergy ? `${data.stats.todayEnergy.toFixed(2)} kWh` : "0 kWh",
-      change: "+12%",
-      icon: Zap,
-      color: "text-green-500",
-      bg: "bg-green-500/10",
-    },
-    {
-      name: "Today's Cost",
-      value: data?.stats?.todayCost ? `₵${data.stats.todayCost.toFixed(2)}` : "₵0",
-      change: "+8%",
-      icon: CreditCard,
-      color: "text-purple-500",
-      bg: "bg-purple-500/10",
-    },
-    {
-      name: "Current Voltage",
-      value: data?.live?.voltage ? `${data.live.voltage.toFixed(1)}V` : "0V",
-      change: data?.live?.status === 'online' ? 'Online' : 'Offline',
-      icon: Zap,
+      name: "Total Users",
+      value: statsData?.userStats?.totalUsers || 0,
+      icon: Users,
       color: "text-blue-500",
       bg: "bg-blue-500/10",
     },
     {
-      name: "Current Power",
-      value: data?.live?.power ? `${data.live.power.toFixed(2)}W` : "0W",
-      change: data?.live?.current ? `${data.live.current.toFixed(2)}A` : "0A",
-      icon: AlertTriangle,
+      name: "Active Subscriptions",
+      value: statsData?.subscriptionStats?.activeSubscriptions || 0,
+      icon: CreditCard,
+      color: "text-green-500",
+      bg: "bg-green-500/10",
+    },
+    {
+      name: "Total Revenue",
+      value: `₵${statsData?.subscriptionStats?.totalRevenue?.toLocaleString() || 0}`,
+      icon: TrendingUp,
+      color: "text-purple-500",
+      bg: "bg-purple-500/10",
+    },
+    {
+      name: "Active Meters (24h)",
+      value: statsData?.systemStats?.activeMeters24h || 0,
+      icon: Activity,
       color: "text-amber-500",
       bg: "bg-amber-500/10",
     },
   ];
 
+  const filteredMeters = meters.filter(meter =>
+    meter.user?.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    meter.user?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    meter.meterCode.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Dashboard Overview</h1>
+          <h1 className="text-3xl font-bold text-white">Administrator Overview</h1>
           <p className="text-zinc-400">
-            Live data from your smart meter • Last updated: {data?.live?.timestamp ? new Date(data.live.timestamp).toLocaleTimeString() : 'N/A'}
+            System-wide statistics and user usage tracking
           </p>
         </div>
         <button
-          onClick={refetch}
+          onClick={fetchData}
           className="flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors"
         >
           <RefreshCw className="h-4 w-4" />
@@ -148,10 +153,6 @@ export default function DashboardOverview() {
               <div className={`rounded-lg p-2 ${stat.bg} ${stat.color}`}>
                 <stat.icon className="h-6 w-6" />
               </div>
-              <div className="flex items-center gap-1 text-xs font-medium text-green-400 bg-green-400/10 px-2 py-1 rounded-full">
-                <TrendingUp className="h-3 w-3" />
-                {stat.change}
-              </div>
             </div>
             <div className="mt-4">
               <h3 className="text-sm font-medium text-zinc-400">{stat.name}</h3>
@@ -161,81 +162,96 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Chart */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 backdrop-blur-sm">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-white">Energy Consumption (Week)</h3>
-            <div className="flex gap-2">
-              <button className="text-xs font-medium text-blue-400 hover:text-blue-300">Weekly</button>
-              <button className="text-xs font-medium text-zinc-500 hover:text-zinc-400">Monthly</button>
+      <div className="grid gap-6">
+        {/* User Usage Table */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 backdrop-blur-sm overflow-hidden">
+          <div className="p-6 border-b border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 className="text-lg font-bold text-white">User Usage Overview</h3>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+              <input
+                type="text"
+                placeholder="Search users..."
+                className="pl-10 pr-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
-          <div className="h-[300px] w-full">
-            {loadingChart ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorEnergy" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                  <XAxis dataKey="name" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}kWh`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
-                    itemStyle={{ color: '#e4e4e7' }}
-                  />
-                  <Area type="monotone" dataKey="energy" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorEnergy)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-zinc-400">
+              <thead className="bg-zinc-900/50 text-xs uppercase text-zinc-500">
+                <tr>
+                  <th className="px-6 py-4 font-medium">User Details</th>
+                  <th className="px-6 py-4 font-medium">Meter Code</th>
+                  <th className="px-6 py-4 font-medium">Last Energy Reading</th>
+                  <th className="px-6 py-4 font-medium">Last Seen</th>
+                  <th className="px-6 py-4 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800">
+                {filteredMeters.map((meter) => (
+                  <tr key={meter.meterCode} className="group hover:bg-zinc-800/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="text-white font-medium">{meter.user?.fullname || meter.user?.username}</div>
+                      <div className="text-xs text-zinc-500">{meter.user?.email}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <code className="text-xs text-blue-400">{meter.meterCode}</code>
+                    </td>
+                    <td className="px-6 py-4 text-white">
+                      {meter.lastReading?.energyKWh ? `${meter.lastReading.energyKWh.toFixed(2)} kWh` : "N/A"}
+                    </td>
+                    <td className="px-6 py-4 text-zinc-400">
+                      {meter.lastReading?.timestamp ? new Date(meter.lastReading.timestamp).toLocaleString() : "Never"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meter.subscription?.status === 'active'
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                        {meter.subscription?.status || 'Inactive'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {filteredMeters.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-zinc-500">
+                      No users found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* Meter Info */}
+        {/* System Load Chart (Optional/Placeholder for future) */}
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 backdrop-blur-sm">
           <div className="mb-6 flex items-center justify-between">
-             <h3 className="text-lg font-bold text-white">Meter Information</h3>
-             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-               data?.live?.status === 'online' 
-                 ? 'bg-green-500/10 text-green-400' 
-                 : 'bg-red-500/10 text-red-400'
-             }`}>
-               {data?.live?.status || 'Unknown'}
-             </span>
+            <h3 className="text-lg font-bold text-white">System Energy Trend</h3>
+            <span className="text-xs text-zinc-500">Weekly Aggregate</span>
           </div>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-              <span className="text-sm text-zinc-400">Meter Code</span>
-              <span className="text-sm font-medium text-white">{data?.live?.meterCode || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between items-center p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-              <span className="text-sm text-zinc-400">Voltage</span>
-              <span className="text-sm font-medium text-white">{data?.live?.voltage?.toFixed(2) || '0'} V</span>
-            </div>
-            <div className="flex justify-between items-center p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-              <span className="text-sm text-zinc-400">Current</span>
-              <span className="text-sm font-medium text-white">{data?.live?.current?.toFixed(2) || '0'} A</span>
-            </div>
-            <div className="flex justify-between items-center p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-              <span className="text-sm text-zinc-400">Power</span>
-              <span className="text-sm font-medium text-white">{data?.live?.power?.toFixed(2) || '0'} W</span>
-            </div>
-            <div className="flex justify-between items-center p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-              <span className="text-sm text-zinc-400">Total Energy</span>
-              <span className="text-sm font-medium text-white">{data?.live?.energy?.toFixed(2) || '0'} kWh</span>
-            </div>
-            <div className="flex justify-between items-center p-4 rounded-lg bg-zinc-800/50 border border-zinc-700">
-              <span className="text-sm text-zinc-400">Total Cost</span>
-              <span className="text-sm font-medium text-white">₵{data?.live?.cost?.toFixed(2) || '0'}</span>
-            </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorEnergy" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                <XAxis dataKey="name" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
+                  itemStyle={{ color: '#e4e4e7' }}
+                />
+                <Area type="monotone" dataKey="energy" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorEnergy)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
